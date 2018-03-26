@@ -54,6 +54,10 @@
                                 <color key="backgroundColor" red="0.30271363099999998" green="0.76862745099999996" blue="0.2274509804" alpha="1" colorSpace="calibratedRGB"/>
                                 <state key="normal" image="hexagonal"/>
                             </button>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" image="pawn-b" translatesAutoresizingMaskIntoConstraints="NO" id="ni4-a2-7wt">
+                                <rect key="frame" x="97" y="31" width="48" height="48"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                            </imageView>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <viewLayoutGuide key="safeArea" id="W36-vI-7oM"/>
@@ -61,7 +65,7 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dfy-o8-xf1" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="-526" y="133"/>
+            <point key="canvasLocation" x="-527.20000000000005" y="132.68365817091455"/>
         </scene>
         <!--View Controller-->
         <scene sceneID="tne-QT-ifu">
@@ -151,6 +155,7 @@
     </scenes>
     <resources>
         <image name="hexagonal" width="256" height="256"/>
+        <image name="pawn-b" width="256" height="256"/>
     </resources>
     <inferredMetricsTieBreakers>
         <segue reference="mHm-kT-LXj"/>

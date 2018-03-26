@@ -19,6 +19,8 @@ class ViewController: UIViewController {
 	var throwingIndex: Int! = -1
 	var game: Game!
 	
+	var currentPlayerUsingPower = false
+	
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		cardCollection.dataSource = self
@@ -45,7 +47,7 @@ class ViewController: UIViewController {
 						if k < 0 {
 							left = abs(k) + (-j+4)*2
 						}
-						let button:HexButton = HexButton(frame: CGRect(x: left*hexSize[0]/2, y: hexSize[1]*(k+4), width: hexSize[0], height: hexSize[0]))
+						let button: HexButton = HexButton(frame: CGRect(x: left*hexSize[0]/2, y: hexSize[1]*(k+4), width: hexSize[0], height: hexSize[0]))
 						button.hexX = i
 						button.hexY = j
 						button.hexZ = k
@@ -66,6 +68,28 @@ class ViewController: UIViewController {
 						button.setImage(myImage, for: .normal)
 						button.addTarget(self, action:#selector(self.doSomething(sender:)), for: .touchUpInside)
 						self.mainScrollView.addSubview(button)
+						
+						for player in game.players {
+							for position in player.location {
+								if position[0] == i && position[1] == j && position[2] == k {
+									let pawn: UIImageView = UIImageView(frame: CGRect(x: Double(hexSize[0])/5.0, y: Double(hexSize[0])/5.0, width: Double(hexSize[0])/1.7, height: Double(hexSize[0])/1.7))
+									pawn.contentMode = .scaleAspectFit
+									switch player.color {
+									case ColorCode.red.rawValue:
+										pawn.image = UIImage(named: "pawn-r")
+									case ColorCode.green.rawValue:
+										pawn.image = UIImage(named: "pawn-g")
+									case ColorCode.yellow.rawValue:
+										pawn.image = UIImage(named: "pawn-y")
+									case ColorCode.blue.rawValue:
+										pawn.image = UIImage(named: "pawn-b")
+									default:
+										break
+									}
+									button.addSubview(pawn)
+								}
+							}
+						}
 					}
 				}
 			}
@@ -74,6 +98,7 @@ class ViewController: UIViewController {
 	}
 	
 	@objc func doSomething(sender: HexButton) {
+		self.generateHex()
 		print("\(sender.hexX) \(sender.hexY) \(sender.hexZ)")
 	}
 	
@@ -101,6 +126,7 @@ class ViewController: UIViewController {
 		switch game.nowTurnState {
 		case TurnState.chooseCard.rawValue:
 			if throwingIndex != -1 {
+				mainButton.setTitle("Confirm", for: .normal)
 				game.currentPlayerThrowCard(index: throwingIndex)
 				throwingIndex = -1
 			} else {
@@ -177,6 +203,14 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
 	func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
 		if game.nowTurnState != TurnState.chooseCard.rawValue {
 			return
+		}
+		if throwingIndex == indexPath.row {
+			currentPlayerUsingPower = !currentPlayerUsingPower
+		}
+		if currentPlayerUsingPower {
+			mainButton.setTitle("Use Power", for: .normal)
+		} else {
+			mainButton.setTitle("Confirm", for: .normal)
 		}
 		throwingIndex = indexPath.row
 		collectionView.reloadData()
