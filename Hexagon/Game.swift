@@ -81,6 +81,21 @@ class Game {
 	func currentPlayerThrowCard(index: Int) {
 		players[turn].useCard(index: index)
 	}
+	var currentHex: HexCoor!
+	func currentPlayerSelectPawn(hex: HexCoor) {
+		currentHex = hex
+		print("\(currentHex.hexX) \(currentHex.hexY) \(currentHex.hexZ)")
+	}
+	func currentPlayerSelectMove(hex: HexCoor) {
+		var i = 0
+		for location in players[turn].location {
+			if location.elementsEqual([currentHex.hexX, currentHex.hexY, currentHex.hexZ]) {
+				players[turn].location[i] = [hex.hexX, hex.hexY, hex.hexZ]
+				break
+			}
+			i += 1
+		}
+	}
 	
 	func removePawnAt(x: Int, y: Int, z: Int) {
 		for player in players {
@@ -93,6 +108,34 @@ class Game {
 	
 	func getCurrentPlayerColor() -> Int {
 		return players[turn].color
+	}
+	
+	func getCrrentPlayer() -> Player {
+		return players[turn]
+	}
+	
+	func checkCurrentPlayerPawnLocation(x: Int, y: Int, z: Int) -> Bool {
+		for location in players[turn].location {
+			if location.elementsEqual([x, y, z]) {
+				return true
+			}
+		}
+		return false
+	}
+	
+	func checkAvailablePawnLocation(x: Int, y: Int, z: Int) -> Bool {
+		if gameGrid[x+4][y+4][z+4] != ColorCode.black.rawValue {
+			for player in players {
+				for location in player.location {
+					if location.elementsEqual([x, y, z]) {
+						return false
+					}
+				}
+			}
+			return true
+		} else {
+			return false
+		}
 	}
 }
 

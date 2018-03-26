@@ -43,6 +43,22 @@ class HexButton: UIButton {
 	var hexColor: Int!
 }
 
+struct HexCoor {
+	var hexX: Int!
+	var hexY: Int!
+	var hexZ: Int!
+	init(x: Int, y: Int, z: Int) {
+		hexX = x
+		hexY = y
+		hexZ = z
+	}
+	init(arr: [Int]) {
+		hexX = arr[0]
+		hexY = arr[1]
+		hexZ = arr[2]
+	}
+}
+
 extension UIImage {
 	
 	func maskWithColor(color: UIColor) -> UIImage? {

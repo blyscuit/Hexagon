@@ -18,6 +18,7 @@ class ViewController: UIViewController {
 	
 	var throwingIndex: Int! = -1
 	var game: Game!
+	var selectedCoordinate: HexCoor? = nil
 	
 	var currentPlayerUsingPower = false
 	
@@ -43,11 +44,8 @@ class ViewController: UIViewController {
 			for j in -4...4 {
 				for k in -4...4 {
 					if game.gameGrid[i+4][j+4][k+4] != -1 {
-						var left = abs(k) + (i+4)*2
-						if k < 0 {
-							left = abs(k) + (-j+4)*2
-						}
-						let button: HexButton = HexButton(frame: CGRect(x: left*hexSize[0]/2, y: hexSize[1]*(k+4), width: hexSize[0], height: hexSize[0]))
+						let hexLocation = atHexLocation(i: i, j: j, k: k)
+						let button: HexButton = HexButton(frame: CGRect(x: Int(hexLocation.x), y: Int(hexLocation.y), width: hexSize[0], height: hexSize[0]))
 						button.hexX = i
 						button.hexY = j
 						button.hexZ = k
@@ -66,7 +64,7 @@ class ViewController: UIViewController {
 							myImage = myImage?.maskWithColor(color: UIColor.black)
 						}
 						button.setImage(myImage, for: .normal)
-						button.addTarget(self, action:#selector(self.doSomething(sender:)), for: .touchUpInside)
+						button.addTarget(self, action:#selector(self.tapHex(sender:)), for: .touchUpInside)
 						self.mainScrollView.addSubview(button)
 						
 						for player in game.players {
@@ -97,9 +95,9 @@ class ViewController: UIViewController {
 		mainScrollView.contentSize = CGSize(width: hexSize[0]*9, height: hexSize[1]*9)
 	}
 	
-	@objc func doSomething(sender: HexButton) {
-		self.generateHex()
+	@objc func tapHex(sender: HexButton) {
 		print("\(sender.hexX) \(sender.hexY) \(sender.hexZ)")
+		self.selectedCoordinate = HexCoor(x: sender.hexX, y: sender.hexY, z: sender.hexZ)
 	}
 	
 	func reColor() {
@@ -115,6 +113,14 @@ class ViewController: UIViewController {
 		default:
 			mainLabel.textColor = UIColor.white
 		}
+	}
+	
+	func atHexLocation(i: Int, j: Int, k: Int) -> CGPoint {
+		var left = abs(k) + (i+4)*2
+		if k < 0 {
+			left = abs(k) + (-j+4)*2
+		}
+		return CGPoint(x: left*hexSize[0]/2, y: hexSize[1]*(k+4))
 	}
 
 	override func didReceiveMemoryWarning() {
@@ -132,13 +138,32 @@ class ViewController: UIViewController {
 			} else {
 				return
 			}
+		case TurnState.choosePawn.rawValue:
+			if let selectCoor = self.selectedCoordinate {
+				if game.checkCurrentPlayerPawnLocation(x: selectCoor.hexX, y: selectCoor.hexY, z: selectCoor.hexZ) {
+					game.currentPlayerSelectPawn(hex: selectCoor)
+				} else {
+					return
+				}
+				self.selectedCoordinate = nil
+			} else {
+				return
+			}
 		case TurnState.chooseMove.rawValue:
-			break
+			if let selectCoor = self.selectedCoordinate {
+				if game.checkAvailablePawnLocation(x: selectCoor.hexX, y: selectCoor.hexY, z: selectCoor.hexZ) {
+					game.currentPlayerSelectMove(hex: selectCoor)
+				} else {
+					return
+				}
+				self.selectedCoordinate = nil
+				self.generateHex()
+			} else {
+				return
+			}
 		case TurnState.changeColor.rawValue:
 			break
 		case TurnState.kill.rawValue:
-			break
-		case TurnState.choosePawn.rawValue:
 			break
 		default:
 			break
