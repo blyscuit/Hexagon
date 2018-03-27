@@ -7,12 +7,15 @@
 //
 
 import UIKit
+//ase red, blue, yellow, green, black
+var colorArray = [UIColor(hexString: "#A90027"), UIColor(hexString: "#8FA6D4"), UIColor(hexString: "#F5C14D"), UIColor(hexString: "#76B746"), UIColor(hexString: "#111111")]
 
 class ViewController: UIViewController {
 	@IBOutlet weak var mainScrollView: UIScrollView!
 	@IBOutlet weak var mainLabel: UILabel!
 	@IBOutlet weak var mainButton: UIButton!
 	@IBOutlet weak var cardCollection: UICollectionView!
+	
 	
 	var hexSize = [66,52]
 	
@@ -21,6 +24,10 @@ class ViewController: UIViewController {
 	var selectedCoordinate: HexCoor? = nil
 	
 	var currentPlayerUsingPower = false
+	
+	var changingColorHex: [HexCoor] = []
+	
+	var spinningIcon: NVActivityIndicatorView!
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -51,18 +58,8 @@ class ViewController: UIViewController {
 						button.hexZ = k
 						button.hexColor = game.gameGrid[i+4][j+4][k+4]
 						var myImage = UIImage(named: "hexagonal")
-						switch button.hexColor {
-						case ColorCode.red.rawValue:
-							myImage = myImage?.maskWithColor(color: UIColor.red)
-						case ColorCode.green.rawValue:
-							myImage = myImage?.maskWithColor(color: UIColor.green)
-						case ColorCode.yellow.rawValue:
-							myImage = myImage?.maskWithColor(color: UIColor.yellow)
-						case ColorCode.blue.rawValue:
-							myImage = myImage?.maskWithColor(color: UIColor.blue)
-						default:
-							myImage = myImage?.maskWithColor(color: UIColor.black)
-						}
+						let nowColor = button.hexColor
+						myImage = myImage?.maskWithColor(color: colorArray[button.hexColor])
 						button.setImage(myImage, for: .normal)
 						button.addTarget(self, action:#selector(self.tapHex(sender:)), for: .touchUpInside)
 						self.mainScrollView.addSubview(button)
@@ -70,8 +67,9 @@ class ViewController: UIViewController {
 						for player in game.players {
 							for position in player.location {
 								if position[0] == i && position[1] == j && position[2] == k {
-									let pawn: UIImageView = UIImageView(frame: CGRect(x: Double(hexSize[0])/5.0, y: Double(hexSize[0])/5.0, width: Double(hexSize[0])/1.7, height: Double(hexSize[0])/1.7))
-									pawn.contentMode = .scaleAspectFit
+									let pawn: UIImageView = UIImageView(frame: CGRect(x: Double(hexSize[0])/2.5, y: Double(hexSize[0])/5.0, width: Double(hexSize[0])/(1.7*3.43), height: Double(hexSize[0])/1.7))
+									pawn.contentMode = .scaleAspectFill
+									pawn.backgroundColor = UIColor.white
 									switch player.color {
 									case ColorCode.red.rawValue:
 										pawn.image = UIImage(named: "pawn-r")
@@ -88,6 +86,16 @@ class ViewController: UIViewController {
 								}
 							}
 						}
+						var spinningLocation = atHexLocation(i: 0, j: 0, k: 0)
+						spinningIcon = NVActivityIndicatorView(frame: CGRect(x: Double(spinningLocation.x)+Double(hexSize[0])/5.0, y: Double(spinningLocation.y)+Double(hexSize[0])/5.0, width: Double(hexSize[0])/1.4, height: Double(hexSize[0])/1.4), type: .ballScaleMultiple, color: .white, padding: 0)
+						spinningIcon.isUserInteractionEnabled = false
+						mainScrollView.addSubview(spinningIcon)
+						if let coor = selectedCoordinate {
+							moveSpinning()
+							spinningIcon.startAnimating()
+						} else {
+							spinningIcon.stopAnimating()
+						}
 					}
 				}
 			}
@@ -97,22 +105,28 @@ class ViewController: UIViewController {
 	
 	@objc func tapHex(sender: HexButton) {
 		print("\(sender.hexX) \(sender.hexY) \(sender.hexZ)")
-		self.selectedCoordinate = HexCoor(x: sender.hexX, y: sender.hexY, z: sender.hexZ)
+		if game.nowTurnState == TurnState.changeColor.rawValue {
+			game.currentPlayerchangeColorAt(coor: HexCoor(x: sender.hexX, y: sender.hexY, z: sender.hexZ))
+			self.generateHex()
+		} else {
+			let newCoor = HexCoor(x: sender.hexX, y: sender.hexY, z: sender.hexZ)
+			if newCoor.match(hex: self.selectedCoordinate) {
+				self.selectedCoordinate = nil
+			} else {
+				self.selectedCoordinate = newCoor
+			}
+		}
+		if self.selectedCoordinate != nil {
+			moveSpinning()
+			spinningIcon.startAnimating()
+		} else {
+			spinningIcon.stopAnimating()
+		}
 	}
 	
 	func reColor() {
-		switch game.getCurrentPlayerColor() {
-		case ColorCode.red.rawValue:
-			mainLabel.textColor = UIColor.red
-		case ColorCode.green.rawValue:
-			mainLabel.textColor = UIColor.green
-		case ColorCode.yellow.rawValue:
-			mainLabel.textColor = UIColor.yellow
-		case ColorCode.blue.rawValue:
-			mainLabel.textColor = UIColor.blue
-		default:
-			mainLabel.textColor = UIColor.white
-		}
+		mainLabel.textColor = colorArray[game.getCurrentPlayerColor()]
+		mainButton.backgroundColor = colorArray[game.getCurrentPlayerColor()]
 	}
 	
 	func atHexLocation(i: Int, j: Int, k: Int) -> CGPoint {
@@ -133,8 +147,10 @@ class ViewController: UIViewController {
 		case TurnState.chooseCard.rawValue:
 			if throwingIndex != -1 {
 				mainButton.setTitle("Confirm", for: .normal)
-				game.currentPlayerThrowCard(index: throwingIndex)
+				game.currentPlayerThrowCard(index: throwingIndex, useSkill: currentPlayerUsingPower)
 				throwingIndex = -1
+				currentPlayerUsingPower = false
+				cardCollection.isUserInteractionEnabled = false
 			} else {
 				return
 			}
@@ -146,6 +162,7 @@ class ViewController: UIViewController {
 					return
 				}
 				self.selectedCoordinate = nil
+				spinningIcon.stopAnimating()
 			} else {
 				return
 			}
@@ -157,13 +174,29 @@ class ViewController: UIViewController {
 					return
 				}
 				self.selectedCoordinate = nil
+				spinningIcon.stopAnimating()
 				self.generateHex()
 			} else {
 				return
 			}
 		case TurnState.changeColor.rawValue:
+			game.confirmColorChange()
 			break
 		case TurnState.kill.rawValue:
+			if let selectCoor = self.selectedCoordinate {
+				if !game.checkAvailablePawnLocation(x: selectCoor.hexX, y: selectCoor.hexY, z: selectCoor.hexZ) {
+					game.removePawnAt(x: selectCoor.hexX, y: selectCoor.hexY, z: selectCoor.hexZ)
+				} else {
+					return
+				}
+				self.selectedCoordinate = nil
+				spinningIcon.stopAnimating()
+				self.generateHex()
+				if game.gameOver {
+					performSegue(withIdentifier: "iden", sender: self)
+				}
+			} else {
+			}
 			break
 		default:
 			break
@@ -172,6 +205,8 @@ class ViewController: UIViewController {
 		switch newRound["turn"]! {
 		case TurnState.chooseCard.rawValue:
 			mainLabel.text = "Choose a card to play"
+			cardCollection.isUserInteractionEnabled = true
+			cardCollection.reloadData()
 		case TurnState.chooseMove.rawValue:
 			mainLabel.text = "Choose a position to move to"
 			break
@@ -188,9 +223,22 @@ class ViewController: UIViewController {
 			break
 		}
 		reColor()
-		cardCollection.reloadData()
 	}
 	
+	func moveSpinning() {
+		if let coor = selectedCoordinate {
+			let spinningLocation = atHexLocation(i: coor.hexX, j: coor.hexY, k: coor.hexZ)
+			spinningIcon.frame = CGRect(x: Double(spinningLocation.x)+Double(hexSize[0])/5.0, y: Double(spinningLocation.y)+Double(hexSize[0])/5.0, width: Double(hexSize[0])/1.7, height: Double(hexSize[0])/1.7)
+		}
+	}
+	
+	override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+		if segue.identifier == "iden" {
+			let nav = segue.destination as! ScoreViewController
+			nav.game = game
+			nav.mainView = self
+		}
+	}
 }
 
 extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
@@ -203,18 +251,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
 													  for: indexPath)
 		let currentHand = game.listCurrentPlayerCards()
 		var bColor = UIColor.white
-		switch currentHand[indexPath.row] {
-		case ColorCode.red.rawValue:
-			bColor = UIColor.red
-		case ColorCode.green.rawValue:
-			bColor = UIColor.green
-		case ColorCode.yellow.rawValue:
-			bColor = UIColor.yellow
-		case ColorCode.blue.rawValue:
-			bColor = UIColor.blue
-		default:
-			bColor = UIColor.white
-		}
+		bColor = colorArray[currentHand[indexPath.row]]
 		cell.backgroundColor = bColor
 		// Configure the cell
 		if throwingIndex == indexPath.row {
@@ -241,4 +278,24 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
 		collectionView.reloadData()
 	}
 	
+}
+
+extension UIColor {
+	convenience init(hexString: String) {
+		let hex = hexString.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+		var int = UInt32()
+		Scanner(string: hex).scanHexInt32(&int)
+		let a, r, g, b: UInt32
+		switch hex.count {
+		case 3: // RGB (12-bit)
+			(a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+		case 6: // RGB (24-bit)
+			(a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+		case 8: // ARGB (32-bit)
+			(a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+		default:
+			(a, r, g, b) = (255, 0, 0, 0)
+		}
+		self.init(red: CGFloat(r) / 255, green: CGFloat(g) / 255, blue: CGFloat(b) / 255, alpha: CGFloat(a) / 255)
+	}
 }

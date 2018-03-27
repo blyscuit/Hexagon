@@ -16,11 +16,15 @@ import Foundation
 class Game {
 	let startPosition = ["2": [[[0,-4,4], [1,-4,3], [-1, -3, 4]], [[0,4,-4], [-1,4,-3], [1, 3, -4]]], "3": [[[0,4,-4], [-1,4,-3], [1, 3, -4]], [[-4,0,4], [-4,1,3], [-3, -1, 4]], [[4,-4,0], [3,-4,1], [4, -3, -1]] ], "4": [[[0,-4,4],[1,-4,3]], [[-4,0,4],[-4,1,3]],[[0,4,-4], [-1,4,-3]],[[4, 0,-4],[4,-1,-3]]]]
 	var gameGrid: [[[Int]]]!
+	var wasGrid: [[[Int]]]!
 	var color = [14, 14, 14, 14, 5]
 	var players: [Player] = []
 	var turn = 0
 	var nowTurnState = 0
 	var mainDeck: Deck!
+	var nextTurn: [Int] = []
+	var gameOver = false
+	
 	init(players: Int) {
 		reset(players: players)
 	}
@@ -51,25 +55,37 @@ class Game {
 		self.players = []
 		for i in 0..<players {
 			self.players.append(Player(location: startPositionStuff![i], deck: mainDeck, color:i))
+			nextTurn.append(i)
 		}
+		nextTurn.removeFirst()
 		self.players.shuffle()
 		gameGrid = grid
+		wasGrid = grid
 	}
 	
-	func changeColorAt(i: Int, j: Int, k: Int, to: Int) {
-		gameGrid[i][j][k] = to
+	func currentPlayerchangeColorAt(coor: HexCoor) {
+		if gameGrid[coor.hexX+4][coor.hexY+4][coor.hexZ+4] != players[turn].color {
+			gameGrid[coor.hexX+4][coor.hexY+4][coor.hexZ+4] = players[turn].color
+		} else {
+			gameGrid[coor.hexX+4][coor.hexY+4][coor.hexZ+4] = wasGrid[coor.hexX+4][coor.hexY+4][coor.hexZ+4]
+		}
 	}
+	
+	func confirmColorChange() {
+		wasGrid = gameGrid
+	}
+	
+	
 	
 	func nextState() -> [String: Int] {
 		nowTurnState = (nowTurnState+1)
 		if nowTurnState == TurnState.turnEnd.rawValue {
 			nowTurnState = 0
-			turn = (turn + 1) % players.count
+			turn = nextTurn.removeFirst()
 		}
-		if nowTurnState == 0 && turn == 0 && players[turn].hand.count <= 2 {
-			for player in players {
-				player.fullHandFrom(deck: mainDeck)
-			}
+		if nowTurnState == 0 && players[turn].hand.count <= 2 {
+			players[turn].fullHandFrom(deck: mainDeck)
+
 		}
 		return ["turn": nowTurnState, "color": turn]
 	}
@@ -78,7 +94,18 @@ class Game {
 		return players[turn].hand
 	}
 	
-	func currentPlayerThrowCard(index: Int) {
+	func currentPlayerThrowCard(index: Int, useSkill: Bool) {
+		print("\(useSkill) \(useSkill == false)")
+		if useSkill == false {
+			nextTurn.append(turn)
+		} else {
+			nextTurn.insert(turn, at: 0)
+			for nextPlayer in 1...players.count {
+				nextTurn.append((nextPlayer+turn)%(players.count-1))
+			}
+			nextTurn.append(turn)
+		}
+		print(nextTurn)
 		players[turn].useCard(index: index)
 	}
 	var currentHex: HexCoor!
@@ -98,11 +125,19 @@ class Game {
 	}
 	
 	func removePawnAt(x: Int, y: Int, z: Int) {
+		var survive = 0
 		for player in players {
 			let result = player.removePawn(killLocation: [x, y, z])
 			if result["kill"]! == 1 {
 				players[turn].score += 1
 			}
+			if player.location.count > 0 {
+				survive += 1
+			}
+		}
+		if survive <= 1 {
+			// Game End
+			gameOver = true
 		}
 	}
 	

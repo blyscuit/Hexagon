@@ -41,6 +41,7 @@ class HexButton: UIButton {
 	var hexY: Int!
 	var hexZ: Int!
 	var hexColor: Int!
+	var wasHexColor: Int!
 }
 
 struct HexCoor {
@@ -56,6 +57,23 @@ struct HexCoor {
 		hexX = arr[0]
 		hexY = arr[1]
 		hexZ = arr[2]
+	}
+	
+	func match(x: Int, y: Int, z: Int) -> Bool {
+		if z == hexZ && y == hexY && hexX == x {
+			return true
+		}
+		return false
+	}
+	
+	func match(hex: HexCoor?) -> Bool {
+		guard let hex = hex else {
+			return false
+		}
+		if hex.hexZ == hexZ && hex.hexY == hexY && hexX == hex.hexX {
+			return true
+		}
+		return false
 	}
 }
 
